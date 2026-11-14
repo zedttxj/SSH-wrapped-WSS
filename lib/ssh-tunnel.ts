@@ -5,6 +5,7 @@ import { POD_SSH_USER, POD_SSH_PASSWORD, SSH_HOST_KEY, DATABASE_HOST, DATABASE_P
 import fs from 'fs';
 
 import { Server } from 'ssh2';
+import { validateLocalSessionSync } from './session-utils';
 
 type statusType = 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED' | 'ERROR';
 
@@ -200,13 +201,25 @@ export function startSshDB() {
 
       client.on('authentication', (ctx) => {
         console.log('[SSH Bridge] Authentication...');
-        if (ctx.username !== POD_SSH_USER) {
-          return ctx.reject(['password']);
-        }
+        // if (ctx.username !== POD_SSH_USER) {
+        //   return ctx.reject(['password']);
+        // }
+        //
+        // if (ctx.method === 'password' && ctx.password === POD_SSH_PASSWORD) {
+        //   console.log(`[SSH Bridge] Password auth succeeded for user: ${ctx.username}`);
+        //   return ctx.accept();
+        // }
+        //
+        // return ctx.reject(['password']);
+        if (ctx.method === 'password') {
+          const token = ctx.password;
+          const tokenOwner = validateLocalSessionSync(token); 
 
-        if (ctx.method === 'password' && ctx.password === POD_SSH_PASSWORD) {
-          console.log(`[SSH Bridge] Password auth succeeded for user: ${ctx.username}`);
-          return ctx.accept();
+          // Verify token is valid AND matches the requested SSH username (or map it dynamically)
+          if (tokenOwner && tokenOwner === ctx.username) {
+            console.log(`[SSH Bridge] SSO matched! User ${ctx.username} authenticated.`);
+            return ctx.accept();
+          }
         }
 
         return ctx.reject(['password']);

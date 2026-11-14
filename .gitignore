@@ -37,7 +37,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-cco_deploy_credentials.txt
 misc-file-data/
 local-files/
 
@@ -62,7 +61,6 @@ prod-deploy.sh
 public/tinymce
 
 Dockerfile
-auth-test.sh
 kpod.sh
 kube-deploy.sh
 next.config.js
@@ -75,5 +73,8 @@ server.js
 tailwind.config.js
 tsconfig.json
 utils/
-lib/*
-!lib/ssh-tunnel
+lib/config.ts
+lib/session-utils.ts
+lib/deepset.ts
+lib/prisma.ts
+middleware.ts
