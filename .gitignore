@@ -63,7 +63,6 @@ public/tinymce
 
 Dockerfile
 auth-test.sh
-db-connect.sh
 kpod.sh
 kube-deploy.sh
 next.config.js
@@ -76,4 +75,5 @@ server.js
 tailwind.config.js
 tsconfig.json
 utils/
-
+lib/*
+!lib/ssh-tunnel
