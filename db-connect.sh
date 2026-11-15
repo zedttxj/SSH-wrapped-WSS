@@ -1,15 +1,26 @@
 #!/bin/sh
-set -e
+set -euo pipefail
 
-ENV_FILE=".env"
+# 1. Robustly locate and load the .env file
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+  set -a
+  source "$SCRIPT_DIR/.env"
+  set +a
+else
+  echo "Error: .env file not found at $SCRIPT_DIR/.env" >&2
+  exit 1
+fi
 
-# Helper function to extract a value from .env
+# 2. Helper function for strict validation
 get_env_var() {
-  var_name="$1"
-  if [ -f "$ENV_FILE" ]; then
-    # Finds line starting with VAR_NAME=, strips quotes, and returns value
-    grep -E "^${var_name}=" "$ENV_FILE" | cut -d '=' -f2- | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"
+  local var_name="$1"
+  local val="${!var_name:-}"
+  if [ -z "$val" ]; then
+    echo "Error: Required environment variable '$var_name' is missing in .env!" >&2
+    exit 1
   fi
+  echo "$val"
 }
 
 INSTALL_DIR="${HOME}/.local/bin"
@@ -19,12 +30,24 @@ PID_FILE="${PID_DIR}/websocat-ssh.pid"
 
 # Target configuration
 WSS_URL="$(get_env_var 'WSS_URL')"
-POD_SSH_USER="$(get_env_var 'POD_SSH_USER')"
 DATABASE_HOST="$(get_env_var 'DATABASE_HOST')"
 DATABASE_USER="$(get_env_var 'DATABASE_USER')"
 DATABASE_NAME="$(get_env_var 'DATABASE_NAME')"
 DATABASE_PASSWORD="$(get_env_var 'DATABASE_PASSWORD')"
-CMD="ssh -f -N -o "ConnectTimeout=15" -o "ExitOnForwardFailure=yes" -o "ServerAliveInterval=15" -o "ServerAliveCountMax=6" -o "TCPKeepAlive=yes" -o "IPQoS=throughput" -o "StrictHostKeyChecking=no" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o HostKeyAlgorithms=ssh-ed25519,rsa-sha2-512,rsa-sha2-256,ssh-rsa -o PubkeyAcceptedKeyTypes=ssh-ed25519,rsa-sha2-512,rsa-sha2-256,ssh-rsa -o ProxyCommand=\"$TARGET_BIN --binary - $WSS_URL\" -L 127.0.0.1:5433:$DATABASE_HOST:5433 -l $POD_SSH_USER -p 22 localhost"
+CMD="sshpass -p $SESSION_TOKEN ssh -f -N -o \"ConnectTimeout=15\" \
+-o \"ExitOnForwardFailure=yes\" \
+-o \"ServerAliveInterval=15\" \
+-o \"ServerAliveCountMax=6\" \
+-o \"TCPKeepAlive=yes\" \
+-o \"IPQoS=throughput\" \
+-o \"StrictHostKeyChecking=no\" \
+-o UserKnownHostsFile=/dev/null \
+-o HostKeyAlgorithms=ssh-ed25519,rsa-sha2-512,rsa-sha2-256,ssh-rsa \
+-o PubkeyAcceptedKeyTypes=ssh-ed25519,rsa-sha2-512,rsa-sha2-256,ssh-rsa \
+-o ProxyCommand=\"$TARGET_BIN --header \\\"Authorization: Bearer $SESSION_TOKEN\\\" --binary - $WSS_URL\" \
+-L 127.0.0.1:5433:$DATABASE_HOST:5433 \
+-l $SSH_USER -p 22 localhost"
+
 # Base command
 BASE_PSQL="psql -h 127.0.0.1 -p 5433 -U $DATABASE_USER -d $DATABASE_NAME"
 
@@ -151,7 +174,7 @@ start_tunnel() {
   echo "Starting SSH Tunnel using \$CMD..."
 
   # Execute $CMD string safely with eval
-  eval "$CMD"
+  eval "$CMD" &
 
   # Capture PID of the newly spawned background process
   sleep 1
