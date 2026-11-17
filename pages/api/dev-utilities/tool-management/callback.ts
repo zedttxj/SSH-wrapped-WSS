@@ -68,7 +68,7 @@ export default async function handler(
       return res.status(200).json({
         success: true,
         session_token: sessionToken,
-        username: username,
+        ssh_user: username,
       });
     } catch (error) {
       console.error("GitHub token exchange error:", error);

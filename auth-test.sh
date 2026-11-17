@@ -28,6 +28,7 @@ get_env_var() {
 CLIENT_ID="$(get_env_var 'CLIENT_ID')"
 BACKEND_URL="$(get_env_var 'BACKEND_URL')"
 TOKEN_FILE="$(get_env_var 'TOKEN_FILE' '.kube/my-tunnel/session_token')"
+USER_FILE="$(dirname "$TOKEN_FILE")/ssh_user"
 mkdir -p "$(dirname "$TOKEN_FILE")"
 
 SESSION_TOKEN=""
@@ -37,6 +38,10 @@ SSH_USER=""
 if [ -f "$TOKEN_FILE" ] && [ -s "$TOKEN_FILE" ]; then
   SESSION_TOKEN=$(cat "$TOKEN_FILE")
   echo "[*] Using cached application session token."
+fi
+if [ -f "$USER_FILE" ] && [ -s "$USER_FILE" ]; then
+  SSH_USER=$(cat "$USER_FILE")
+  echo "[*] Loaded cached SSH user: $SSH_USER"
 fi
 
 # Optional: Quick health/validation check with backend to ensure it hasn't expired
@@ -110,6 +115,7 @@ if [ -z "$SESSION_TOKEN" ]; then
     -d "{\"github_token\": \"$GITHUB_ACCESS_TOKEN\"}")
 
   SESSION_TOKEN=$(echo "$EXCHANGE_RES" | jq -r '.session_token // empty')
+  SSH_USER=$(echo "$EXCHANGE_RES" | jq -r '.ssh_user // empty')
 
   if [ -z "$SESSION_TOKEN" ]; then
     echo "Error: Backend failed to issue session token: $EXCHANGE_RES" >&2
@@ -118,6 +124,11 @@ if [ -z "$SESSION_TOKEN" ]; then
 
   echo "$SESSION_TOKEN" >"$TOKEN_FILE"
   chmod 600 "$TOKEN_FILE"
+
+  if [ -n "$SSH_USER" ]; then
+    echo "$SSH_USER" >"$USER_FILE"
+    chmod 600 "$USER_FILE"
+  fi
   echo "[4] Successfully obtained and saved application session token!"
 fi
 

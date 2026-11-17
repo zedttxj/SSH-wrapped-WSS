@@ -15,9 +15,10 @@ fi
 # 2. Helper function for strict validation
 get_env_var() {
   local var_name="$1"
-  local val="${!var_name:-}"
+  local default_val="${2:-}"
+  local val="${!var_name:-$default_val}"
   if [ -z "$val" ]; then
-    echo "Error: Required environment variable '$var_name' is missing in .env!" >&2
+    echo "Error: Required environment variable '$var_name' is missing or empty in .env!" >&2
     exit 1
   fi
   echo "$val"
@@ -30,10 +31,10 @@ PID_FILE="${PID_DIR}/websocat-ssh.pid"
 
 # Target configuration
 WSS_URL="$(get_env_var 'WSS_URL')"
-DATABASE_HOST="$(get_env_var 'DATABASE_HOST')"
-DATABASE_USER="$(get_env_var 'DATABASE_USER')"
-DATABASE_NAME="$(get_env_var 'DATABASE_NAME')"
-DATABASE_PASSWORD="$(get_env_var 'DATABASE_PASSWORD')"
+DATABASE_HOST="$(get_env_var 'DATABASE_HOST' 'a')"
+DATABASE_USER="$(get_env_var 'DATABASE_USER' 'b')"
+DATABASE_NAME="$(get_env_var 'DATABASE_NAME' 'c' )"
+DATABASE_PASSWORD="$(get_env_var 'DATABASE_PASSWORD' 'd')"
 CMD="sshpass -p $SESSION_TOKEN ssh -f -N -o \"ConnectTimeout=15\" \
 -o \"ExitOnForwardFailure=yes\" \
 -o \"ServerAliveInterval=15\" \
