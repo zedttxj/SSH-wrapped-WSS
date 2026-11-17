@@ -141,9 +141,8 @@ export default async function handler(
                 console.log(
                   `[SSH Bridge] Outgoing bytes to client: ${chunk.length}`,
                 );
-                ws.send(chunk);
+                ws.send(chunk, callback);
               }
-              callback();
             },
           });
 
